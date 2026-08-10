@@ -1,22 +1,15 @@
 import { useState, useMemo } from "react";
 
-/* ------------------------------------------------------------------
-   BOOK A DATE — satirical Calendly-for-romance prototype
-   Flow: profile → application → "second round" → calendar → time →
-   checkout ($75, demo only) → boarding-pass confirmation.
-   All state is in-memory. No real payments. Edit CONFIG to rebrand.
-------------------------------------------------------------------- */
-
 const CONFIG = {
   bachelor: "Daniel",
   tagline: "Romantic. Punctual. Fully booked by Thursday.",
   price: 75,
   durationMin: 90,
   location: "Wine bar of his choosing",
+  moneroAddress: "85ghUA3X2THUKkaPo8ohYu5zGvzDE5GMwCZCcJgmTcq3GTSZLAfeJfGDn9i9VJMPTmVpkvqbVE9PpEZkGbn6iU9r3Tu5cAe",
 };
 
 const TAKEN = {
-  // day-of-month -> list of { time, by } already claimed
   3: [{ time: "7:00 PM", by: "Paige" }],
   8: [{ time: "6:00 PM", by: "Maddie" }, { time: "8:00 PM", by: "Brooke" }],
   14: [{ time: "7:00 PM", by: "Morgan" }],
@@ -29,133 +22,85 @@ const LEADERBOARD = ["Paige", "Maddie", "Brooke", "Morgan", "Kendall", "Chloe", 
 
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,100&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
-
-.bd-root {
-  --ink: #1d1b26;
-  --paper: #fdfcfa;
-  --rose: #c0264b;
-  --rose-dark: #8e1236;
-  --blush: #fbeef1;
-  --line: #e6e1dc;
-  --mute: #79737e;
-  --ok: #2e7d5b;
-  font-family: 'Inter', sans-serif;
-  color: var(--ink);
-  background: var(--paper);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  padding: 24px 16px 64px;
-}
-.bd-root * { box-sizing: border-box; }
-.bd-shell { width: 100%; max-width: 430px; }
-
-.bd-brand {
-  display: flex; align-items: baseline; justify-content: space-between;
-  border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 20px;
-}
-.bd-brand h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-.bd-brand span { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mute); }
-
-.bd-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 24px; }
-
-.bd-display { font-family: 'Fraunces', serif; font-weight: 560; letter-spacing: -0.02em; line-height: 1.05; margin: 0; }
-.bd-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--rose); margin-bottom: 10px; }
-.bd-mute { color: var(--mute); font-size: 14px; line-height: 1.55; }
-
-.bd-btn {
-  width: 100%; border: none; border-radius: 10px; padding: 14px 18px;
-  background: var(--rose); color: #fff; font: 600 15px 'Inter', sans-serif;
-  cursor: pointer; transition: background .15s ease, transform .1s ease;
-}
-.bd-btn:hover { background: var(--rose-dark); }
-.bd-btn:active { transform: scale(.985); }
-.bd-btn:focus-visible { outline: 3px solid var(--blush); outline-offset: 2px; }
-.bd-btn[disabled] { background: var(--line); color: var(--mute); cursor: not-allowed; }
-.bd-btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-.bd-btn.ghost:hover { border-color: var(--ink); background: transparent; }
-
-.bd-field { margin-bottom: 14px; }
-.bd-field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
-.bd-field input, .bd-field textarea {
-  width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px;
-  font: 400 14px 'Inter', sans-serif; background: var(--paper);
-}
-.bd-field input:focus, .bd-field textarea:focus { outline: 2px solid var(--rose); outline-offset: 0; border-color: transparent; }
-
-.bd-demand {
-  display: flex; align-items: center; gap: 8px; margin: 16px 0;
-  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--rose-dark);
-  background: var(--blush); border-radius: 8px; padding: 9px 12px;
-}
-.bd-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rose); animation: bd-pulse 1.6s infinite; }
-@keyframes bd-pulse { 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .bd-dot { animation: none; } }
-
-.bd-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 14px; }
-.bd-cal .dow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mute); text-align: center; padding: 4px 0; }
-.bd-day {
-  aspect-ratio: 1; border: 1px solid transparent; border-radius: 9px; background: transparent;
-  font: 500 13px 'Inter', sans-serif; color: var(--ink); cursor: pointer; position: relative;
-}
-.bd-day:hover:not([disabled]) { border-color: var(--rose); }
-.bd-day[disabled] { color: #cfc9c4; cursor: default; }
-.bd-day.sel { background: var(--rose); color: #fff; }
-.bd-day .tick { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--rose); }
-.bd-day.sel .tick { background: #fff; }
-
-.bd-slot {
-  display: flex; justify-content: space-between; align-items: center; width: 100%;
-  border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; margin-bottom: 8px;
-  background: #fff; font: 500 14px 'Inter', sans-serif; cursor: pointer;
-}
-.bd-slot:hover:not([disabled]) { border-color: var(--rose); }
-.bd-slot.sel { border-color: var(--rose); background: var(--blush); }
-.bd-slot[disabled] { cursor: not-allowed; color: var(--mute); background: var(--paper); }
-.bd-slot .who { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mute); }
-
-.bd-rank { list-style: none; margin: 14px 0 0; padding: 0; }
-.bd-rank li {
-  display: flex; justify-content: space-between; padding: 9px 2px;
-  border-bottom: 1px dashed var(--line); font-size: 14px;
-}
-.bd-rank li span:last-child { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mute); }
-
-.bd-total { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 10px 2px; border-top: 1px solid var(--ink); margin-top: 8px; }
-
-.bd-pass { border: 1px solid var(--ink); border-radius: 14px; overflow: hidden; }
-.bd-pass-top { background: var(--ink); color: var(--paper); padding: 18px 20px; }
-.bd-pass-top .bd-eyebrow { color: #f2a9bc; margin-bottom: 4px; }
-.bd-pass-body { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.bd-pass-body .k { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--mute); }
-.bd-pass-body .v { font-weight: 600; font-size: 14px; margin-top: 2px; }
-.bd-perf { border-top: 2px dashed var(--line); margin: 0 14px; }
-.bd-pass-foot { padding: 14px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mute); }
-
-.bd-note { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mute); text-align: center; margin-top: 18px; }
-.bd-back { background: none; border: none; color: var(--mute); font: 500 12px 'Inter', sans-serif; cursor: pointer; padding: 0; margin-bottom: 14px; }
-.bd-back:hover { color: var(--ink); }
-h2.bd-display { font-size: 26px; margin-bottom: 6px; }
+.bd-root{--ink:#1d1b26;--paper:#fdfcfa;--rose:#c0264b;--rose-dark:#8e1236;--blush:#fbeef1;--line:#e6e1dc;--mute:#79737e;--ok:#2e7d5b;font-family:'Inter',sans-serif;color:var(--ink);background:var(--paper);min-height:100vh;display:flex;justify-content:center;padding:24px 16px 64px}
+.bd-root *{box-sizing:border-box}
+.bd-shell{width:100%;max-width:430px}
+.bd-brand{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:20px}
+.bd-brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:20px;margin:0;letter-spacing:-0.01em}
+.bd-brand span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mute)}
+.bd-card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:24px}
+.bd-display{font-family:'Fraunces',serif;font-weight:560;letter-spacing:-0.02em;line-height:1.05;margin:0}
+.bd-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--rose);margin-bottom:10px}
+.bd-mute{color:var(--mute);font-size:14px;line-height:1.55}
+.bd-btn{width:100%;border:none;border-radius:10px;padding:14px 18px;background:var(--rose);color:#fff;font:600 15px 'Inter',sans-serif;cursor:pointer;transition:background .15s ease,transform .1s ease}
+.bd-btn:hover{background:var(--rose-dark)}
+.bd-btn:active{transform:scale(.985)}
+.bd-btn[disabled]{background:var(--line);color:var(--mute);cursor:not-allowed}
+.bd-btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.bd-field{margin-bottom:14px}
+.bd-field label{display:block;font-size:12px;font-weight:600;margin-bottom:6px}
+.bd-field input,.bd-field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:11px 12px;font:400 14px 'Inter',sans-serif;background:var(--paper)}
+.bd-field input:focus,.bd-field textarea:focus{outline:2px solid var(--rose);outline-offset:0;border-color:transparent}
+.bd-demand{display:flex;align-items:center;gap:8px;margin:16px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--rose-dark);background:var(--blush);border-radius:8px;padding:9px 12px}
+.bd-dot{width:7px;height:7px;border-radius:50%;background:var(--rose);animation:bd-pulse 1.6s infinite}
+@keyframes bd-pulse{50%{opacity:.35}}
+.bd-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:14px}
+.bd-cal .dow{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);text-align:center;padding:4px 0}
+.bd-day{aspect-ratio:1;border:1px solid transparent;border-radius:9px;background:transparent;font:500 13px 'Inter',sans-serif;color:var(--ink);cursor:pointer;position:relative}
+.bd-day:hover:not([disabled]){border-color:var(--rose)}
+.bd-day[disabled]{color:#cfc9c4;cursor:default}
+.bd-day.sel{background:var(--rose);color:#fff}
+.bd-day .tick{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--rose)}
+.bd-day.sel .tick{background:#fff}
+.bd-slot{display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin-bottom:8px;background:#fff;font:500 14px 'Inter',sans-serif;cursor:pointer}
+.bd-slot:hover:not([disabled]){border-color:var(--rose)}
+.bd-slot.sel{border-color:var(--rose);background:var(--blush)}
+.bd-slot[disabled]{cursor:not-allowed;color:var(--mute);background:var(--paper)}
+.bd-slot .who{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mute)}
+.bd-rank{list-style:none;margin:14px 0 0;padding:0}
+.bd-rank li{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px dashed var(--line);font-size:14px}
+.bd-rank li span:last-child{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mute)}
+.bd-total{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 2px;border-top:1px solid var(--ink);margin-top:8px}
+.bd-xmr-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0;word-break:break-all;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.6;display:block;text-decoration:none;color:inherit}
+.bd-copy-btn{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:transparent;color:var(--ink);font:500 13px 'IBM Plex Mono',monospace;cursor:pointer;margin-bottom:10px}
+.bd-copy-btn:active{background:var(--blush)}
+.bd-copy-confirm{color:var(--ok);font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;height:16px;margin-bottom:10px}
+.bd-pass{border:1px solid var(--ink);border-radius:14px;overflow:hidden}
+.bd-pass-top{background:var(--ink);color:var(--paper);padding:18px 20px}
+.bd-pass-top .bd-eyebrow{color:#f2a9bc;margin-bottom:4px}
+.bd-pass-body{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.bd-pass-body .k{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute)}
+.bd-pass-body .v{font-weight:600;font-size:14px;margin-top:2px}
+.bd-perf{border-top:2px dashed var(--line);margin:0 14px}
+.bd-pass-foot{padding:14px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute)}
+.bd-note{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);text-align:center;margin-top:18px}
+.bd-back{background:none;border:none;color:var(--mute);font:500 12px 'Inter',sans-serif;cursor:pointer;padding:0;margin-bottom:14px}
+.bd-back:hover{color:var(--ink)}
+h2.bd-display{font-size:26px;margin-bottom:6px}
 `;
 
 const MONTH = "July 2026";
-const FIRST_DOW = 3; // July 1, 2026 = Wednesday
+const FIRST_DOW = 3;
 const DAYS = 31;
 const TODAY = 24;
 
 export default function DateBooking() {
-  const [step, setStep] = useState("profile"); // profile → apply → round2 → calendar → time → pay → done
+  const [step, setStep] = useState("profile");
   const [applicant, setApplicant] = useState({ name: "", pitch: "" });
   const [day, setDay] = useState(null);
   const [time, setTime] = useState(null);
-  const [card, setCard] = useState({ name: "", number: "" });
+  const [copied, setCopied] = useState(false);
   const confirmation = useMemo(
     () => "LV-" + Math.random().toString(36).slice(2, 7).toUpperCase(),
-    [step === "done"]
+    []
   );
-
   const takenForDay = TAKEN[day] || [];
   const back = (to) => () => setStep(to);
+  const copyAddress = () => {
+    navigator.clipboard.writeText(CONFIG.moneroAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="bd-root">
@@ -180,7 +125,7 @@ export default function DateBooking() {
             <ul className="bd-rank">
               <li><span>Duration</span><span>{CONFIG.durationMin} min</span></li>
               <li><span>Venue</span><span>{CONFIG.location}</span></li>
-              <li><span>Reservation fee</span><span>${CONFIG.price}.00</span></li>
+              <li><span>Reservation fee</span><span>${CONFIG.price}.00 XMR</span></li>
             </ul>
             <div style={{ height: 18 }} />
             <button className="bd-btn" onClick={() => setStep("apply")}>
@@ -237,10 +182,10 @@ export default function DateBooking() {
             <div className="bd-eyebrow">Round 2 · Scheduling</div>
             <h2 className="bd-display">{MONTH}</h2>
             <div className="bd-cal">
-              {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              {["S","M","T","W","T","F","S"].map((d, i) => (
                 <div className="dow" key={i}>{d}</div>
               ))}
-              {Array.from({ length: FIRST_DOW }).map((_, i) => <div key={"pad" + i} />)}
+              {Array.from({ length: FIRST_DOW }).map((_, i) => <div key={"pad"+i} />)}
               {Array.from({ length: DAYS }).map((_, i) => {
                 const d = i + 1;
                 const past = d <= TODAY;
@@ -296,24 +241,20 @@ export default function DateBooking() {
               <li><span>Date with {CONFIG.bachelor}</span><span>July {day}, {time}</span></li>
               <li><span>Applicant</span><span>{applicant.name}</span></li>
             </ul>
-            <div className="bd-total"><span>TOTAL DUE</span><span>${CONFIG.price}.00</span></div>
+            <div className="bd-total"><span>TOTAL DUE</span><span>${CONFIG.price}.00 XMR</span></div>
             <div style={{ height: 14 }} />
-            <div className="bd-field">
-              <label htmlFor="bd-card-name">Cardholder name</label>
-              <input id="bd-card-name" value={card.name}
-                onChange={(e) => setCard({ ...card, name: e.target.value })} />
-            </div>
-            <div className="bd-field">
-              <label htmlFor="bd-card-num">Card number</label>
-              <input id="bd-card-num" inputMode="numeric" placeholder="Demo — don't enter a real card"
-                value={card.number}
-                onChange={(e) => setCard({ ...card, number: e.target.value })} />
-            </div>
-            <button className="bd-btn" disabled={!card.name.trim()}
-              onClick={() => setStep("done")}>
-              Pay ${CONFIG.price}.00 & confirm
+            <p className="bd-mute" style={{ marginBottom: 4 }}>Send payment to this Monero address:</p>
+            <a href={"monero:" + CONFIG.moneroAddress} className="bd-xmr-box">
+              {CONFIG.moneroAddress}
+            </a>
+            <button className="bd-copy-btn" onClick={copyAddress}>
+              {copied ? "✓ Copied" : "Copy address"}
             </button>
-            <p className="bd-note">Prototype — no payment is processed.</p>
+            <div className="bd-copy-confirm">{copied ? "Address copied to clipboard" : ""}</div>
+            <button className="bd-btn" onClick={() => setStep("done")}>
+              I've sent the payment
+            </button>
+            <p className="bd-note">Tap the address above to open your Monero wallet.</p>
           </div>
         )}
 
@@ -340,7 +281,7 @@ export default function DateBooking() {
             <div style={{ height: 16 }} />
             <button className="bd-btn ghost" onClick={() => {
               setStep("profile"); setDay(null); setTime(null);
-              setApplicant({ name: "", pitch: "" }); setCard({ name: "", number: "" });
+              setApplicant({ name: "", pitch: "" });
             }}>
               Book another applicant
             </button>
