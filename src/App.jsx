@@ -96,10 +96,41 @@ export default function DateBooking() {
   );
   const takenForDay = TAKEN[day] || [];
   const back = (to) => () => setStep(to);
+
   const copyAddress = () => {
     navigator.clipboard.writeText(CONFIG.moneroAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const downloadICS = () => {
+    const [hhmm, period] = time.split(" ");
+    let hr = parseInt(hhmm.split(":")[0]);
+    if (period === "PM" && hr !== 12) hr += 12;
+    if (period === "AM" && hr === 12) hr = 0;
+    const startHr = String(hr).padStart(2, "0");
+    const endMin = hr * 60 + 90;
+    const endHr = String(Math.floor(endMin / 60)).padStart(2, "0");
+    const endMn = String(endMin % 60).padStart(2, "0");
+    const d = String(day).padStart(2, "0");
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//datebookingcalendar//EN",
+      "BEGIN:VEVENT",
+      `UID:${confirmation}@datebookingcalendar.netlify.app`,
+      `SUMMARY:Date with ${CONFIG.bachelor} — ${applicant.name}`,
+      `DTSTART:202607${d}T${startHr}0000`,
+      `DTEND:202607${d}T${endHr}${endMn}00`,
+      `LOCATION:${CONFIG.location}`,
+      "DESCRIPTION:No refunds. No second chances. HR is watching.",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const a = document.createElement("a");
+    a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+    a.download = `date-with-${CONFIG.bachelor.toLowerCase()}.ics`;
+    a.click();
   };
 
   return (
@@ -278,7 +309,11 @@ export default function DateBooking() {
                 NON-REFUNDABLE · NON-TRANSFERABLE · LOVE IS DEAD
               </div>
             </div>
-            <div style={{ height: 16 }} />
+            <div style={{ height: 12 }} />
+            <button className="bd-btn ghost" onClick={downloadICS}>
+              Add to calendar (.ics)
+            </button>
+            <div style={{ height: 8 }} />
             <button className="bd-btn ghost" onClick={() => {
               setStep("profile"); setDay(null); setTime(null);
               setApplicant({ name: "", pitch: "" });
