@@ -1,147 +1,35 @@
-# 📅 Book a Date with Daniel
+# Book a Date with Daniel
 
-A satirical dating app that replicates a viral joke video — built for real.
+A satirical dating app based on a viral joke video — built for real.
 
-**Live Demo:** https://datebookingcalendar.netlify.app
+**Live:** https://datebookingcalendar.netlify.app
 
----
+## The Joke
 
-## 📱 See It in Action
+A viral video showed a fake app where you apply to date someone through a corporate hiring process. I built it for real.
 
-**[Watch the Instagram Reel](https://www.instagram.com/reel/Db2UmL4z-Lh/?igsh=MzRlODBiNWFlZA==)**
+## Features
 
-**[Original Announcement Reel](https://www.instagram.com/reel/Db1aS69S1sE/?igsh=MzRlODBiNWFlZA==)**
+- Application → "Congrats! You made it to the second round"
+- Calendar with taken slots (taken · Maddie)
+- Monero-only payment
+- Boarding pass confirmation
+- ICS calendar export
+- PWA — installable from browser
 
----
-
-## 🎭 The Joke
-
-A viral video showed a fake app where you "apply" to date someone through a corporate hiring process:
-
-- Submit your application
-- "Congrats! You made it to the second round"
-- Check the calendar (Maddie already took Thursday)
-- Pay $75 in Monero
-- Receive your boarding pass
-
-**I saw the joke and built it for real.**
-
----
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| 📝 **Application** | Submit your name and a pitch |
-| 🎉 **Second Round** | Everyone makes it — that's the joke |
-| 📅 **Calendar** | Pick a date with time slots (some taken) |
-| 💰 **Monero Payment** | Pay with Monero (static address + copy button) |
-| 🎟️ **Boarding Pass** | Confirmation with unique code |
-| 📱 **ICS Export** | Add to any calendar app (Proton, Tuta, Nextcloud, etc.) |
-| 📱 **PWA Support** | Install like a native app on your phone |
-
----
-
-## 🛠️ Tech Stack
-
-| Category | Technology |
-|----------|------------|
-| **Frontend** | React + Vite |
-| **Deployment** | Netlify |
-| **Payments** | Monero (self-custodied) |
-| **Calendar** | Pure ICS generation (no libraries) |
-| **PWA** | vite-plugin-pwa |
-
----
-
-## 💰 Monero Donation Address
-
-```
-85ghUA3X2THUKkaPo8ohYu5zGvzDE5GMwCZCcJgmTcq3GTSZLAfeJfGDn9i9VJMPTmVpkvqbVE9PpEZkGbn6iU9r3Tu5cAe
-```
-
----
-
-## 🚀 Running Locally
+## Run Locally
 
 ```bash
-# Clone the repo
 git clone https://github.com/moderatedan/date-booking-daniel.git
 cd date-booking-daniel
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
-
-# Build for production
-npm run build
 ```
 
----
+## Payment
 
-## 📱 Calendar Export
+Monero only. Address in the app.
 
-The app generates a standard `.ics` file that works with:
+## License
 
-| Service | Support |
-|---------|---------|
-| Proton Calendar | ✅ |
-| Tutanota | ✅ |
-| Nextcloud | ✅ |
-| Apple Calendar | ✅ |
-| Google Calendar | ✅ |
-| Any CalDAV server | ✅ |
-
----
-
-## 📱 PWA Installation
-
-**On your phone:**
-1. Open `https://datebookingcalendar.netlify.app` in Chrome or Firefox
-2. Tap the **"Install"** prompt in the address bar
-3. The app installs like a native app with its own icon
-4. Works offline!
-
----
-
-## 🤝 Contributing
-
-This is a satirical open-source project — contributions welcome!
-
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/your-change`)
-3. Commit your changes (`git commit -m "Add feature"`)
-4. Push to the branch (`git push origin feature/your-change`)
-5. Open a pull request
-
----
-
-## 📄 License
-
-MIT — do whatever you want with it.
-
----
-
-## 🙏 Credits
-
-- Inspired by a viral video on social media
-- Built with ❤️ and too much free time
-- Monero community for the privacy-first payment ethos
-
----
-
-## 📊 Stats
-
-| Metric | Value |
-|--------|-------|
-| **Status** | ✅ Live |
-| **Platforms** | Web + PWA |
-| **Payments** | Monero only |
-| **Open Source** | Yes (MIT) |
-| **Deployed** | Netlify |
-
----
-
-*"No refunds. No second chances. HR is watching."* 👀
+MIT
