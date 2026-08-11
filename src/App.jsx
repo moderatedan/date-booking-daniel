@@ -1,13 +1,37 @@
 import { useState, useMemo } from "react";
 
-const CONFIG = {
-  bachelor: "Daniel",
+const DEFAULT_CONFIG = {
+  name: "Daniel",
   tagline: "Romantic. Punctual. Fully booked by Thursday.",
   price: 75,
   durationMin: 90,
   location: "Wine bar of his choosing",
-  moneroAddress: "85ghUA3X2THUKkaPo8ohYu5zGvzDE5GMwCZCcJgmTcq3GTSZLAfeJfGDn9i9VJMPTmVpkvqbVE9PpEZkGbn6iU9r3Tu5cAe",
+  moneroAddress: "",
 };
+
+function getConfigFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    name: params.get('name') || DEFAULT_CONFIG.name,
+    tagline: params.get('tagline') || DEFAULT_CONFIG.tagline,
+    price: parseInt(params.get('price')) || DEFAULT_CONFIG.price,
+    durationMin: parseInt(params.get('duration')) || DEFAULT_CONFIG.durationMin,
+    moneroAddress: params.get('address') || DEFAULT_CONFIG.moneroAddress,
+    location: params.get('location') || DEFAULT_CONFIG.location,
+  };
+}
+
+function generateShareURL(config) {
+  const base = window.location.origin + window.location.pathname;
+  const params = new URLSearchParams();
+  if (config.name) params.set('name', config.name);
+  if (config.tagline) params.set('tagline', config.tagline);
+  if (config.price) params.set('price', config.price);
+  if (config.durationMin) params.set('duration', config.durationMin);
+  if (config.moneroAddress) params.set('address', config.moneroAddress);
+  if (config.location) params.set('location', config.location);
+  return base + '?' + params.toString();
+}
 
 const TAKEN = {
   3: [{ time: "7:00 PM", by: "Paige" }],
@@ -77,6 +101,7 @@ const css = `
 .bd-back{background:none;border:none;color:var(--mute);font:500 12px 'Inter',sans-serif;cursor:pointer;padding:0;margin-bottom:14px}
 .bd-back:hover{color:var(--ink)}
 h2.bd-display{font-size:26px;margin-bottom:6px}
+.share-box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0;word-break:break-all;font-family:'IBM Plex Mono',monospace;font-size:11px}
 `;
 
 const MONTH = "July 2026";
@@ -85,91 +110,220 @@ const DAYS = 31;
 const TODAY = 24;
 
 export default function DateBooking() {
-  const [step, setStep] = useState("profile");
+  const urlConfig = getConfigFromURL();
+  const [config, setConfig] = useState(urlConfig);
+  const [step, setStep] = useState(() => {
+    return urlConfig.name !== DEFAULT_CONFIG.name ? 'profile' : 'setup';
+  });
   const [applicant, setApplicant] = useState({ name: "", pitch: "" });
   const [day, setDay] = useState(null);
   const [time, setTime] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const confirmation = useMemo(
     () => "LV-" + Math.random().toString(36).slice(2, 7).toUpperCase(),
     []
   );
   const takenForDay = TAKEN[day] || [];
   const back = (to) => () => setStep(to);
-
+  
   const copyAddress = () => {
-    navigator.clipboard.writeText(CONFIG.moneroAddress);
+    navigator.clipboard.writeText(config.moneroAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  
+  const copyShareLink = () => {
+    const url = generateShareURL(config);
+    navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
 
   const downloadICS = () => {
+    const d = String(day).padStart(2, "0");
+    const dateStr = `202607${d}`;
+    
     const [hhmm, period] = time.split(" ");
     let hr = parseInt(hhmm.split(":")[0]);
     if (period === "PM" && hr !== 12) hr += 12;
     if (period === "AM" && hr === 12) hr = 0;
+    
+    const endMin = hr * 60 + config.durationMin;
     const startHr = String(hr).padStart(2, "0");
-    const endMin = hr * 60 + 90;
     const endHr = String(Math.floor(endMin / 60)).padStart(2, "0");
     const endMn = String(endMin % 60).padStart(2, "0");
-    const d = String(day).padStart(2, "0");
+    
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//datebookingcalendar//EN",
       "BEGIN:VEVENT",
-      `UID:${confirmation}@datebookingcalendar.netlify.app`,
-      `SUMMARY:Date with ${CONFIG.bachelor} — ${applicant.name}`,
-      `DTSTART:202607${d}T${startHr}0000`,
-      `DTEND:202607${d}T${endHr}${endMn}00`,
-      `LOCATION:${CONFIG.location}`,
-      "DESCRIPTION:No refunds. No second chances. HR is watching.",
+      `SUMMARY:Date with ${config.name} — ${applicant.name}`,
+      `DTSTART:${dateStr}T${startHr}0000`,
+      `DTEND:${dateStr}T${endHr}${endMn}00`,
+      `LOCATION:${config.location}`,
+      "DESCRIPTION:No refunds. HR is watching.",
+      `UID:${confirmation}@datebooking`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
     const a = document.createElement("a");
     a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
-    a.download = `date-with-${CONFIG.bachelor.toLowerCase()}.ics`;
+    a.download = `date-with-${config.name}.ics`;
     a.click();
   };
 
-  return (
-    <div className="bd-root">
-      <style>{css}</style>
-      <div className="bd-shell">
-        <header className="bd-brand">
-          <h1>Reserve&nbsp;{CONFIG.bachelor}</h1>
-          <span>love is dead™</span>
-        </header>
+  if (step === 'setup') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Set up your page</h1>
+            <span>love is dead™</span>
+          </header>
+          <div className="bd-card">
+            <div className="bd-eyebrow">Create your booking page</div>
+            <div className="bd-field">
+              <label htmlFor="bd-name">Your name *</label>
+              <input id="bd-name" value={config.name}
+                onChange={(e) => setConfig({ ...config, name: e.target.value })}
+                placeholder="e.g., Sarah, Mike, Dr. Smith" />
+            </div>
+            <div className="bd-field">
+              <label htmlFor="bd-tagline">Tagline</label>
+              <input id="bd-tagline" value={config.tagline}
+                onChange={(e) => setConfig({ ...config, tagline: e.target.value })}
+                placeholder="Romantic. Punctual. Fully booked by Thursday." />
+            </div>
+            <div className="bd-field">
+              <label htmlFor="bd-price">Price ($)</label>
+              <input id="bd-price" type="number" value={config.price}
+                onChange={(e) => setConfig({ ...config, price: parseInt(e.target.value) || 0 })}
+                placeholder="75" />
+            </div>
+            <div className="bd-field">
+              <label htmlFor="bd-duration">Duration (minutes)</label>
+              <input id="bd-duration" type="number" value={config.durationMin}
+                onChange={(e) => setConfig({ ...config, durationMin: parseInt(e.target.value) || 90 })}
+                placeholder="90" />
+            </div>
+            <div className="bd-field">
+              <label htmlFor="bd-location">Location</label>
+              <input id="bd-location" value={config.location}
+                onChange={(e) => setConfig({ ...config, location: e.target.value })}
+                placeholder="Wine bar of his choosing" />
+            </div>
+            <div className="bd-field">
+              <label htmlFor="bd-address">Your Monero address *</label>
+              <input id="bd-address" value={config.moneroAddress}
+                onChange={(e) => setConfig({ ...config, moneroAddress: e.target.value })}
+                placeholder="Your Monero wallet address" />
+              <p className="bd-note" style={{ textAlign: 'left', marginTop: 4 }}>
+                Payments go directly to this address.
+              </p>
+            </div>
+            <button className="bd-btn" disabled={!config.name.trim() || !config.moneroAddress.trim()}
+              onClick={() => {
+                setStep('profile');
+                const url = generateShareURL(config);
+                window.history.replaceState({}, '', url);
+              }}>
+              Create my booking page
+            </button>
+            <div style={{ height: 12 }} />
+            <button className="bd-btn ghost" onClick={() => {
+              setConfig({...DEFAULT_CONFIG, moneroAddress: "85ghUA3X2THUKkaPo8ohYu5zGvzDE5GMwCZCcJgmTcq3GTSZLAfeJfGDn9i9VJMPTmVpkvqbVE9PpEZkGbn6iU9r3Tu5cAe"});
+              setStep('profile');
+            }}>
+              Use default (Daniel)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        {step === "profile" && (
+  if (step === 'share') {
+    const shareUrl = generateShareURL(config);
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Your booking page is live</h1>
+            <span>love is dead™</span>
+          </header>
+          <div className="bd-card" style={{ textAlign: 'center' }}>
+            <h2 className="bd-display" style={{ fontSize: 28 }}>
+              Share your page
+            </h2>
+            <p className="bd-mute">Send this link to anyone who wants to book you.</p>
+            <div className="share-box">{shareUrl}</div>
+            <button className="bd-copy-btn" onClick={copyShareLink}>
+              {shareCopied ? "✓ Copied" : "📋 Copy link"}
+            </button>
+            <div className="bd-copy-confirm">{shareCopied ? "Link copied to clipboard" : ""}</div>
+            <button className="bd-btn" onClick={() => setStep('profile')}>
+              View my booking page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'profile') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div className="bd-card">
             <div className="bd-eyebrow">Now accepting applicants</div>
             <h2 className="bd-display" style={{ fontSize: 34 }}>
-              Book a date<br />with {CONFIG.bachelor}
+              Book a date<br />with {config.name}
             </h2>
-            <p className="bd-mute" style={{ marginTop: 10 }}>{CONFIG.tagline}</p>
+            <p className="bd-mute" style={{ marginTop: 10 }}>{config.tagline}</p>
             <div className="bd-demand">
               <span className="bd-dot" />
               {LEADERBOARD.length} people booked this month — demand is high
             </div>
             <ul className="bd-rank">
-              <li><span>Duration</span><span>{CONFIG.durationMin} min</span></li>
-              <li><span>Venue</span><span>{CONFIG.location}</span></li>
-              <li><span>Reservation fee</span><span>${CONFIG.price}.00 XMR</span></li>
+              <li><span>Duration</span><span>{config.durationMin} min</span></li>
+              <li><span>Venue</span><span>{config.location}</span></li>
+              <li><span>Reservation fee</span><span>${config.price}.00 XMR</span></li>
             </ul>
-            <div style={{ height: 18 }} />
-            <button className="bd-btn" onClick={() => setStep("apply")}>
+            <div style={{ height: 12 }} />
+            <button className="bd-btn ghost" onClick={() => setStep('share')}>
+              Share this page
+            </button>
+            <div style={{ height: 8 }} />
+            <button className="bd-btn" onClick={() => setStep('apply')}>
               Apply for a reservation
             </button>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {step === "apply" && (
+  if (step === 'apply') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div className="bd-card">
-            <button className="bd-back" onClick={back("profile")}>← Back</button>
+            <button className="bd-back" onClick={back('profile')}>← Back</button>
             <div className="bd-eyebrow">Round 1 · Application</div>
-            <h2 className="bd-display">Tell {CONFIG.bachelor} why</h2>
+            <h2 className="bd-display">Tell {config.name} why</h2>
             <p className="bd-mute" style={{ marginBottom: 16 }}>
               Applications are reviewed instantly by a rigorous process (there is no process).
             </p>
@@ -186,13 +340,24 @@ export default function DateBooking() {
                 placeholder="Keep it under one restraining order" />
             </div>
             <button className="bd-btn" disabled={!applicant.name.trim()}
-              onClick={() => setStep("round2")}>
+              onClick={() => setStep('round2')}>
               Submit application
             </button>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {step === "round2" && (
+  if (step === 'round2') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div className="bd-card" style={{ textAlign: "center", padding: "40px 24px" }}>
             <div className="bd-eyebrow">Application reviewed</div>
             <h2 className="bd-display" style={{ fontSize: 30 }}>
@@ -201,15 +366,26 @@ export default function DateBooking() {
             <p className="bd-mute" style={{ margin: "14px 0 22px" }}>
               Everyone makes it to the second round. That's the business model.
             </p>
-            <button className="bd-btn" onClick={() => setStep("calendar")}>
+            <button className="bd-btn" onClick={() => setStep('calendar')}>
               Choose a date
             </button>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {step === "calendar" && (
+  if (step === 'calendar') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div className="bd-card">
-            <button className="bd-back" onClick={back("round2")}>← Back</button>
+            <button className="bd-back" onClick={back('round2')}>← Back</button>
             <div className="bd-eyebrow">Round 2 · Scheduling</div>
             <h2 className="bd-display">{MONTH}</h2>
             <div className="bd-cal">
@@ -233,15 +409,26 @@ export default function DateBooking() {
             </div>
             <p className="bd-note">· = another applicant already holds a slot that day</p>
             <div style={{ height: 12 }} />
-            <button className="bd-btn" disabled={!day} onClick={() => setStep("time")}>
+            <button className="bd-btn" disabled={!day} onClick={() => setStep('time')}>
               {day ? `Continue — July ${day}` : "Select a day"}
             </button>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {step === "time" && (
+  if (step === 'time') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div className="bd-card">
-            <button className="bd-back" onClick={back("calendar")}>← Back</button>
+            <button className="bd-back" onClick={back('calendar')}>← Back</button>
             <div className="bd-eyebrow">July {day} · Select a time</div>
             <h2 className="bd-display">Available slots</h2>
             <div style={{ height: 12 }} />
@@ -252,56 +439,78 @@ export default function DateBooking() {
                   className={"bd-slot" + (time === t ? " sel" : "")}
                   onClick={() => setTime(t)}>
                   <span>{t}</span>
-                  <span className="who">{claimed ? `taken · ${claimed.by}` : `${CONFIG.durationMin} min`}</span>
+                  <span className="who">{claimed ? `taken · ${claimed.by}` : `${config.durationMin} min`}</span>
                 </button>
               );
             })}
             <div style={{ height: 8 }} />
-            <button className="bd-btn" disabled={!time} onClick={() => setStep("pay")}>
+            <button className="bd-btn" disabled={!time} onClick={() => setStep('pay')}>
               Reserve {time || "a slot"}
             </button>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {step === "pay" && (
+  if (step === 'pay') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div className="bd-card">
-            <button className="bd-back" onClick={back("time")}>← Back</button>
+            <button className="bd-back" onClick={back('time')}>← Back</button>
             <div className="bd-eyebrow">Final round · Payment</div>
             <h2 className="bd-display">Reserve your spot</h2>
             <ul className="bd-rank">
-              <li><span>Date with {CONFIG.bachelor}</span><span>July {day}, {time}</span></li>
+              <li><span>Date with {config.name}</span><span>July {day}, {time}</span></li>
               <li><span>Applicant</span><span>{applicant.name}</span></li>
             </ul>
-            <div className="bd-total"><span>TOTAL DUE</span><span>${CONFIG.price}.00 XMR</span></div>
+            <div className="bd-total"><span>TOTAL DUE</span><span>${config.price}.00 XMR</span></div>
             <div style={{ height: 14 }} />
             <p className="bd-mute" style={{ marginBottom: 4 }}>Send payment to this Monero address:</p>
-            <a href={"monero:" + CONFIG.moneroAddress} className="bd-xmr-box">
-              {CONFIG.moneroAddress}
+            <a href={"monero:" + config.moneroAddress} className="bd-xmr-box">
+              {config.moneroAddress}
             </a>
             <button className="bd-copy-btn" onClick={copyAddress}>
               {copied ? "✓ Copied" : "Copy address"}
             </button>
             <div className="bd-copy-confirm">{copied ? "Address copied to clipboard" : ""}</div>
-            <button className="bd-btn" onClick={() => setStep("done")}>
+            <button className="bd-btn" onClick={() => setStep('done')}>
               I've sent the payment
             </button>
             <p className="bd-note">Tap the address above to open your Monero wallet.</p>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {step === "done" && (
+  if (step === 'done') {
+    return (
+      <div className="bd-root">
+        <style>{css}</style>
+        <div className="bd-shell">
+          <header className="bd-brand">
+            <h1>Reserve {config.name}</h1>
+            <span>love is dead™</span>
+          </header>
           <div>
             <div className="bd-pass">
               <div className="bd-pass-top">
                 <div className="bd-eyebrow">Reservation confirmed</div>
                 <h2 className="bd-display" style={{ color: "inherit", fontSize: 24 }}>
-                  {applicant.name} × {CONFIG.bachelor}
+                  {applicant.name} × {config.name}
                 </h2>
               </div>
               <div className="bd-pass-body">
                 <div><div className="k">Date</div><div className="v">July {day}, 2026</div></div>
                 <div><div className="k">Time</div><div className="v">{time}</div></div>
-                <div><div className="k">Venue</div><div className="v">{CONFIG.location}</div></div>
+                <div><div className="k">Venue</div><div className="v">{config.location}</div></div>
                 <div><div className="k">Confirmation</div><div className="v">{confirmation}</div></div>
               </div>
               <div className="bd-perf" />
@@ -311,18 +520,20 @@ export default function DateBooking() {
             </div>
             <div style={{ height: 12 }} />
             <button className="bd-btn ghost" onClick={downloadICS}>
-              Add to calendar (.ics)
+              📅 Add to calendar (.ics)
             </button>
-            <div style={{ height: 8 }} />
+            <div style={{ height: 12 }} />
             <button className="bd-btn ghost" onClick={() => {
-              setStep("profile"); setDay(null); setTime(null);
+              setStep('profile'); setDay(null); setTime(null);
               setApplicant({ name: "", pitch: "" });
             }}>
               Book another applicant
             </button>
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
