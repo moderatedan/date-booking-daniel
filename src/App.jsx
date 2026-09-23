@@ -234,7 +234,7 @@ export default function DateBooking() {
             title="What is Monero?"
           />
           <p>
-            <strong>Get Monero:</strong> Use <a href="https://trocador.app" target="_blank" rel="noreferrer">Trocador</a> to exchange any crypto anonymously — no account needed.
+            <strong>Get Monero:</strong> Use <a href="https://trocador.app/?ref=EORXpB6CGD" target="_blank" rel="noreferrer">Trocador</a> to exchange any crypto anonymously — no account needed.
           </p>
           <p>
             <strong>Mobile wallet:</strong> <a href="https://cakewallet.com" target="_blank" rel="noreferrer">Cake Wallet</a> is the easiest way to store and send XMR from your phone.
