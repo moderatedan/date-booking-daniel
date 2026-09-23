@@ -102,6 +102,29 @@ const css = `
 .bd-back:hover{color:var(--ink)}
 h2.bd-display{font-size:26px;margin-bottom:6px}
 .share-box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0;word-break:break-all;font-family:'IBM Plex Mono',monospace;font-size:11px}
+
+/* Age Gate */
+.bd-agegate{position:fixed;inset:0;background:#0d0c13;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+.bd-agegate h2{font-family:'Fraunces',serif;font-weight:500;font-size:28px;color:#fdfcfa;margin:0 0 12px}
+.bd-agegate .ag-sub{font-family:'Inter',sans-serif;font-size:14px;color:#9e98a3;line-height:1.6;max-width:360px;margin:0 auto 10px}
+.bd-agegate .ag-disclaimer{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b6570;line-height:1.7;max-width:360px;margin:0 auto 28px;border:1px solid #2a2733;border-radius:8px;padding:12px}
+.bd-agegate .ag-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px}
+.bd-agegate .ag-enter{background:#c0264b;color:#fff;border:none;border-radius:10px;padding:14px;font:600 15px 'Inter',sans-serif;cursor:pointer}
+.bd-agegate .ag-enter:hover{background:#8e1236}
+.bd-agegate .ag-exit{background:transparent;color:#6b6570;border:1px solid #2a2733;border-radius:10px;padding:14px;font:500 15px 'Inter',sans-serif;cursor:pointer}
+.bd-agegate .ag-exit:hover{color:#9e98a3}
+.bd-agegate .ag-brand{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#3d3844;margin-bottom:28px}
+
+/* How to Pay */
+.bd-howto{margin:20px 0 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.bd-howto summary{font:600 13px 'Inter',sans-serif;padding:12px 14px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.bd-howto summary::-webkit-details-marker{display:none}
+.bd-howto summary::after{content:'▾';font-size:12px;color:var(--mute)}
+details[open] .bd-howto summary::after{content:'▴'}
+.bd-howto-body{padding:14px;border-top:1px solid var(--line)}
+.bd-howto-body iframe{width:100%;border-radius:8px;margin-bottom:14px;border:none}
+.bd-howto-body p{font-size:13px;color:var(--mute);margin:0 0 8px;line-height:1.55}
+.bd-howto-body a{color:var(--rose)}
 `;
 
 const MONTH = "July 2026";
@@ -111,6 +134,7 @@ const TODAY = 24;
 
 export default function DateBooking() {
   const urlConfig = getConfigFromURL();
+  const [ageVerified, setAgeVerified] = useState(false);
   const [config, setConfig] = useState(urlConfig);
   const [step, setStep] = useState(() => {
     return urlConfig.name !== DEFAULT_CONFIG.name ? 'profile' : 'setup';
@@ -126,13 +150,13 @@ export default function DateBooking() {
   );
   const takenForDay = TAKEN[day] || [];
   const back = (to) => () => setStep(to);
-  
+
   const copyAddress = () => {
     navigator.clipboard.writeText(config.moneroAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   const copyShareLink = () => {
     const url = generateShareURL(config);
     navigator.clipboard.writeText(url);
@@ -143,17 +167,14 @@ export default function DateBooking() {
   const downloadICS = () => {
     const d = String(day).padStart(2, "0");
     const dateStr = `202607${d}`;
-    
     const [hhmm, period] = time.split(" ");
     let hr = parseInt(hhmm.split(":")[0]);
     if (period === "PM" && hr !== 12) hr += 12;
     if (period === "AM" && hr === 12) hr = 0;
-    
     const endMin = hr * 60 + config.durationMin;
     const startHr = String(hr).padStart(2, "0");
     const endHr = String(Math.floor(endMin / 60)).padStart(2, "0");
     const endMn = String(endMin % 60).padStart(2, "0");
-    
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -172,6 +193,56 @@ export default function DateBooking() {
     a.download = `date-with-${config.name}.ics`;
     a.click();
   };
+
+  // Age gate — blocks everything until verified
+  if (!ageVerified) {
+    return (
+      <>
+        <style>{css}</style>
+        <div className="bd-agegate">
+          <div className="ag-brand">love is dead™</div>
+          <h2>You must be 18 or older to enter</h2>
+          <p className="ag-sub">
+            This platform is intended for consenting adults only. By entering, you confirm that you are at least 18 years of age.
+          </p>
+          <div className="ag-disclaimer">
+            This service is for legal adult use only. We do not condone or facilitate any illegal activity. Any use of this platform involving minors will be reported to law enforcement. We comply fully with applicable laws and will cooperate with authorities if required.
+          </div>
+          <div className="ag-btns">
+            <button className="ag-enter" onClick={() => setAgeVerified(true)}>
+              I am 18 or older — Enter
+            </button>
+            <button className="ag-exit" onClick={() => { window.location.href = "https://www.google.com"; }}>
+              Exit
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // How to Pay section (reusable)
+  const HowToPay = () => (
+    <details>
+      <div className="bd-howto">
+        <summary>💡 How to pay with Monero</summary>
+        <div className="bd-howto-body">
+          <iframe
+            src="https://www.youtube.com/embed/TZi9xx6aiuY"
+            height="200"
+            allowFullScreen
+            title="What is Monero?"
+          />
+          <p>
+            <strong>Get Monero:</strong> Use <a href="https://trocador.app" target="_blank" rel="noreferrer">Trocador</a> to exchange any crypto anonymously — no account needed.
+          </p>
+          <p>
+            <strong>Mobile wallet:</strong> <a href="https://cakewallet.com" target="_blank" rel="noreferrer">Cake Wallet</a> is the easiest way to store and send XMR from your phone.
+          </p>
+        </div>
+      </div>
+    </details>
+  );
 
   if (step === 'setup') {
     return (
@@ -201,6 +272,9 @@ export default function DateBooking() {
               <input id="bd-price" type="number" value={config.price}
                 onChange={(e) => setConfig({ ...config, price: parseInt(e.target.value) || 0 })}
                 placeholder="75" />
+              <p className="bd-note" style={{ textAlign: 'left', marginTop: 4 }}>
+                A 10% network fee (min $5, max $10) is added to each booking.
+              </p>
             </div>
             <div className="bd-field">
               <label htmlFor="bd-duration">Duration (minutes)</label>
@@ -220,7 +294,7 @@ export default function DateBooking() {
                 onChange={(e) => setConfig({ ...config, moneroAddress: e.target.value })}
                 placeholder="Your Monero wallet address" />
               <p className="bd-note" style={{ textAlign: 'left', marginTop: 4 }}>
-                Payments go directly to this address.
+                Payments go directly to this address. Network fees are separate.
               </p>
             </div>
             <button className="bd-btn" disabled={!config.name.trim() || !config.moneroAddress.trim()}
@@ -237,6 +311,10 @@ export default function DateBooking() {
               setStep('profile');
             }}>
               Use default (Daniel)
+            </button>
+            <div style={{ height: 12 }} />
+            <button className="bd-btn ghost" onClick={() => setStep('profile')}>
+              Reserve Daniel
             </button>
           </div>
         </div>
@@ -255,9 +333,7 @@ export default function DateBooking() {
             <span>love is dead™</span>
           </header>
           <div className="bd-card" style={{ textAlign: 'center' }}>
-            <h2 className="bd-display" style={{ fontSize: 28 }}>
-              Share your page
-            </h2>
+            <h2 className="bd-display" style={{ fontSize: 28 }}>Share your page</h2>
             <p className="bd-mute">Send this link to anyone who wants to book you.</p>
             <div className="share-box">{shareUrl}</div>
             <button className="bd-copy-btn" onClick={copyShareLink}>
@@ -296,6 +372,7 @@ export default function DateBooking() {
               <li><span>Duration</span><span>{config.durationMin} min</span></li>
               <li><span>Venue</span><span>{config.location}</span></li>
               <li><span>Reservation fee</span><span>${config.price}.00 XMR</span></li>
+              <li><span>Network fee</span><span>${Math.min(Math.max(config.price * 0.1, 5), 10).toFixed(2)} XMR</span></li>
             </ul>
             <div style={{ height: 12 }} />
             <button className="bd-btn ghost" onClick={() => setStep('share')}>
@@ -328,8 +405,8 @@ export default function DateBooking() {
               Applications are reviewed instantly by a rigorous process (there is no process).
             </p>
             <div className="bd-field">
-              <label htmlFor="bd-name">Your name</label>
-              <input id="bd-name" value={applicant.name}
+              <label htmlFor="bd-aname">Your name</label>
+              <input id="bd-aname" value={applicant.name}
                 onChange={(e) => setApplicant({ ...applicant, name: e.target.value })}
                 placeholder="First name" />
             </div>
@@ -469,8 +546,13 @@ export default function DateBooking() {
             <ul className="bd-rank">
               <li><span>Date with {config.name}</span><span>July {day}, {time}</span></li>
               <li><span>Applicant</span><span>{applicant.name}</span></li>
+              <li><span>Reservation fee</span><span>${config.price}.00 XMR</span></li>
+              <li><span>Network fee</span><span>${Math.min(Math.max(config.price * 0.1, 5), 10).toFixed(2)} XMR</span></li>
             </ul>
-            <div className="bd-total"><span>TOTAL DUE</span><span>${config.price}.00 XMR</span></div>
+            <div className="bd-total">
+              <span>TOTAL DUE</span>
+              <span>${(config.price + Math.min(Math.max(config.price * 0.1, 5), 10)).toFixed(2)} XMR</span>
+            </div>
             <div style={{ height: 14 }} />
             <p className="bd-mute" style={{ marginBottom: 4 }}>Send payment to this Monero address:</p>
             <a href={"monero:" + config.moneroAddress} className="bd-xmr-box">
@@ -484,6 +566,7 @@ export default function DateBooking() {
               I've sent the payment
             </button>
             <p className="bd-note">Tap the address above to open your Monero wallet.</p>
+            <HowToPay />
           </div>
         </div>
       </div>
