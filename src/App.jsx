@@ -98,6 +98,8 @@ const css = `
 .bd-perf{border-top:2px dashed var(--line);margin:0 14px}
 .bd-pass-foot{padding:14px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute)}
 .bd-note{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);text-align:center;margin-top:18px}
+.bd-footer{text-align:center;margin-top:28px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute)}
+.bd-footer a{color:var(--mute);text-decoration:underline}
 .bd-back{background:none;border:none;color:var(--mute);font:500 12px 'Inter',sans-serif;cursor:pointer;padding:0;margin-bottom:14px}
 .bd-back:hover{color:var(--ink)}
 h2.bd-display{font-size:26px;margin-bottom:6px}
@@ -383,6 +385,9 @@ export default function DateBooking() {
               Apply for a reservation
             </button>
           </div>
+          <div className="bd-footer">
+            <a href="/tos.html" target="_blank">Terms of Service</a>
+          </div>
         </div>
       </div>
     );
@@ -620,3 +625,7 @@ export default function DateBooking() {
 
   return null;
 }
+
+// Footer ToS note — rendered at bottom of each card view via bd-root
+// ToS link is in /tos.html
+
